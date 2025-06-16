@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice & Text Chatbot</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        .chat-box { width: 60%; margin: auto; height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
+        .input-container { margin-top: 10px; }
+        .btn { padding: 10px 20px; margin: 10px; cursor: pointer; }
+        input { width: 60%; padding: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2>AI Chatbot (Text & Voice)</h2>
+    <div class="chat-box" id="chatBox"></div>
+
+    <div class="input-container">
+        <input type="text" id="userInput" placeholder="Type your message here..." />
+        <button class="btn" onclick="sendMessage()">Send</button>
+        <button class="btn" onclick="startListening()">🎤 Speak</button>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById("chatBox");
+        const userInput = document.getElementById("userInput");
+
+        function addMessage(sender, message) {
+            chatBox.innerHTML += `<p><strong>${sender}:</strong> ${message}</p>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function sendMessage() {
+            const text = userInput.value.trim();
+            if (text !== "") {
+                addMessage("You", text);
+                fetchResponse(text);
+                userInput.value = "";
+            }
+        }
+
+        function startListening() {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.start();
+
+            recognition.onresult = function(event) {
+                const userSpeech = event.results[0][0].transcript;
+                addMessage("You", userSpeech);
+                fetchResponse(userSpeech);
+            };
+
+            recognition.onerror = function() {
+                addMessage("Bot", "Sorry, I couldn't understand.");
+            };
+        }
+
+        function fetchResponse(userInput) {
+            fetch("http://localhost:5000/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: userInput })
+            })
+            .then(response => response.json())
+            .then(data => {
+                addMessage("Bot", data.response);
+                speakResponse(data.response);
+            });
+        }
+
+        function speakResponse(text) {
+            const speech = new SpeechSynthesisUtterance(text);
+            speech.lang = 'en-US';
+            window.speechSynthesis.speak(speech);
+        }
+
+        userInput.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
+    </script>
+
+</body>
+</html>
